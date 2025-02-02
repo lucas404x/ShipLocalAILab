@@ -80,7 +80,7 @@
                 <TextBlock 
                     Text="{Binding AnswerBox, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                     TextWrapping="Wrap" VerticalAlignment="Stretch" Height="Auto" Margin="0,8" />
-                <Button Content="Copy" HorizontalAlignment="Center" Command="{Binding CopyOutputCommand}" Visibility="{Binding CopyButtonVisibility, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                <Button Content="Copy" HorizontalAlignment="Center" Command="{Binding CopyOutputCommand}" Visibility="{Binding CopyButtonVisibility, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,8" />
             </StackPanel>
         </ScrollViewer>
     </Grid>
