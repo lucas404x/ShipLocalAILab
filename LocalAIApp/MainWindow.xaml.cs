@@ -219,9 +219,8 @@ public record LLMModelConfig(
 
 public class LLMModel : IDisposable
 {
-    private LLMModelConfig? _modelConfig;
-
-    private LLamaWeights? _model;
+    private LLMModelConfig _modelConfig = null!;
+    private LLamaWeights _model = null!;
     private StatelessExecutor? _executor;
 
     public async Task LoadModel(LLMModelConfig modelConfig)
@@ -255,7 +254,7 @@ public class LLMModel : IDisposable
                 Temperature = 0.4f
             }
         };
-        if (_modelConfig?.ApplyTemplate == false)
+        if (!_modelConfig.ApplyTemplate)
         {
             prompt = $"{_modelConfig.SystemPrompt}\n{prompt}";
         }
@@ -273,5 +272,7 @@ public class LLMModel : IDisposable
     {
         _executor = null;
         _model?.Dispose();
+
+        GC.SuppressFinalize(this);
     }
 }
