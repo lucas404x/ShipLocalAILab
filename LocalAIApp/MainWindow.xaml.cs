@@ -1,14 +1,15 @@
 ﻿using LLama;
 using LLama.Abstractions;
 using LLama.Common;
+using LLama.Native;
 using LLama.Sampling;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Diagnostics;
 
 namespace LocalAIApp;
 
@@ -21,6 +22,12 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = new MainWindowVM();
+
+        NativeLibraryConfig.All
+            .WithCuda()
+#if DEBUG
+            .WithLogCallback((level, message) => Debug.WriteLine($"{level}: {message}"));
+#endif
     }
 }
 
@@ -48,6 +55,52 @@ public class MainWindowVM : INotifyPropertyChanged
         }
     }
 
+    private int _gpuLayerCount = 14;
+    public int GPULayerCount
+    {
+        get => _gpuLayerCount;
+        set
+        {
+            _gpuLayerCount = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private uint _contextSize = 2048;
+    public uint ContextSize
+    {
+        get => _contextSize;
+        set
+        {
+            _contextSize = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private bool _applyTemplate = true;
+    public bool ApplyTemplate
+    {
+        get => _applyTemplate;
+        set
+        {
+            _applyTemplate = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private string _systemPrompt = "You're a prompt compressor specialist. Your objective is get the prompt provided by the user and making it small but keeping its intent. The prompt will be used for another LLM, so make explicit the \"you're\". Just return the compressed prompt, nothing more around it.";
+    public string SystemPrompt
+    {
+        get => _systemPrompt;
+        set
+        {
+            _systemPrompt = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(EnableAskButton));
+        }
+    }
+
+
     private bool _isProcessing = false;
     public bool IsProcessing
     {
@@ -56,16 +109,19 @@ public class MainWindowVM : INotifyPropertyChanged
         {
             _isProcessing = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(EnableLoadModelButton));
+            OnPropertyChanged(nameof(EnableButtons));
             OnPropertyChanged(nameof(EnableAskButton));
             OnPropertyChanged(nameof(CopyButtonVisibility));
         }
     }
 
-    public bool EnableLoadModelButton => !_isProcessing;
+    public bool EnableButtons => !_isProcessing;
 
     public bool EnableAskButton 
-        => !IsProcessing && !string.IsNullOrWhiteSpace(ModelPath) && !string.IsNullOrWhiteSpace(QuestionBox);
+        => EnableButtons 
+        && !string.IsNullOrWhiteSpace(ModelPath) 
+        && !string.IsNullOrWhiteSpace(SystemPrompt) 
+        && !string.IsNullOrWhiteSpace(QuestionBox);
 
     public Visibility CopyButtonVisibility => IsProcessing || string.IsNullOrWhiteSpace(AnswerBox) ? Visibility.Collapsed : Visibility.Visible;
 
@@ -130,7 +186,7 @@ public class MainWindowVM : INotifyPropertyChanged
         {
             IsProcessing = true;
 
-            await _model.LoadModel(ModelPath);
+            await _model.LoadModel(new LLMModelConfig(ModelPath, SystemPrompt, GPULayerCount, ContextSize, ApplyTemplate));
 
             await foreach (var answer in _model.Chat(QuestionBox))
             {
@@ -148,42 +204,44 @@ public class MainWindowVM : INotifyPropertyChanged
     }
 
     private void CopyOutput(object? obj)
-    {
-        Clipboard.SetText(AnswerBox);
-    }
-
+        => Clipboard.SetText(AnswerBox);
 
     protected void OnPropertyChanged([CallerMemberName] string p = "")
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(p));
-    }
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(p));
 }
+
+public record LLMModelConfig(
+    string ModelPath, 
+    string SystemPrompt,
+    int GPULayerCount,
+    uint ContextSize,
+    bool ApplyTemplate);
 
 public class LLMModel : IDisposable
 {
-    private string? _modelPath;
+    private LLMModelConfig? _modelConfig;
 
     private LLamaWeights? _model;
     private StatelessExecutor? _executor;
 
-    public async Task LoadModel(string modelPath)
+    public async Task LoadModel(LLMModelConfig modelConfig)
     {
-        if (_modelPath == modelPath) return;
+        if (_modelConfig == modelConfig) return;
         Dispose();
 
-        _modelPath = modelPath;
+        _modelConfig = modelConfig;
 
-        var parameters = new ModelParams(_modelPath)
+        var parameters = new ModelParams(_modelConfig.ModelPath)
         {
-            GpuLayerCount = 11, // How many layers to offload to GPU. Please adjust it according to your GPU memory.
-            ContextSize = 4096
+            GpuLayerCount = modelConfig.GPULayerCount, // How many layers to offload to GPU. Please adjust it according to your GPU memory.
+            ContextSize = modelConfig.ContextSize,
         };
 
         _model = await LLamaWeights.LoadFromFileAsync(parameters);
         _executor = new StatelessExecutor(_model, parameters)
         {
-            ApplyTemplate = true,
-            SystemMessage = @""
+            ApplyTemplate = _modelConfig.ApplyTemplate,
+            SystemMessage = _modelConfig.ApplyTemplate ? _modelConfig.SystemPrompt : null,
         };
     }
 
@@ -191,12 +249,16 @@ public class LLMModel : IDisposable
     {
         var inferenceParams = new InferenceParams()
         {
-            MaxTokens = 2048,
+            MaxTokens = 1024,
             SamplingPipeline = new DefaultSamplingPipeline
             {
                 Temperature = 0.4f
             }
         };
+        if (_modelConfig?.ApplyTemplate == false)
+        {
+            prompt = $"{_modelConfig.SystemPrompt}\n{prompt}";
+        }
         return _executor!.InferAsync(prompt, inferenceParams);
     }
 
