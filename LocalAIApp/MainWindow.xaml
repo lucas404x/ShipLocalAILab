@@ -12,7 +12,7 @@
     </Window.DataContext>
     <Grid Margin="48,48,48,0">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" CanContentScroll="False">
-            <StackPanel Orientation="Vertical" VerticalAlignment="Stretch">
+            <StackPanel Orientation="Vertical" VerticalAlignment="Stretch" Margin="16,0">
 
                 <Grid Margin="0,8">
                     <Grid.ColumnDefinitions>
