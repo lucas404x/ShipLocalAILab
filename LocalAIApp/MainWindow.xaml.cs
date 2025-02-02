@@ -228,20 +228,32 @@ public class LLMModel : IDisposable
         if (_modelConfig == modelConfig) return;
         Dispose();
 
+        var sw = Stopwatch.StartNew();
+
         _modelConfig = modelConfig;
 
-        var parameters = new ModelParams(_modelConfig.ModelPath)
+        var parameters = await Task.Run(() => // when load large models with cuda the operation may take a while, hanging the application for some seconds
         {
-            GpuLayerCount = modelConfig.GPULayerCount, // How many layers to offload to GPU. Please adjust it according to your GPU memory.
-            ContextSize = modelConfig.ContextSize,
-        };
+            return new ModelParams(_modelConfig.ModelPath)
+            {
+                GpuLayerCount = _modelConfig.GPULayerCount, // How many layers to offload to GPU. Please adjust it according to your GPU memory.
+                ContextSize = _modelConfig.ContextSize,
+            };
+        });
+
+        Debug.WriteLine($"Parameters loaded: {sw.ElapsedMilliseconds}ms");
 
         _model = await LLamaWeights.LoadFromFileAsync(parameters);
+
+        Debug.WriteLine($"Model loaded: {sw.ElapsedMilliseconds}ms");
+
         _executor = new StatelessExecutor(_model, parameters)
         {
             ApplyTemplate = _modelConfig.ApplyTemplate,
             SystemMessage = _modelConfig.ApplyTemplate ? _modelConfig.SystemPrompt : null,
         };
+
+        Debug.WriteLine($"Executor loaded: {sw.ElapsedMilliseconds}ms");
     }
 
     public IAsyncEnumerable<string> Chat(string prompt)
