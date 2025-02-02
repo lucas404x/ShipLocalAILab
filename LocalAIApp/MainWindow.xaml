@@ -1,0 +1,48 @@
+﻿<Window x:Class="LocalAIApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:LocalAIApp"
+        mc:Ignorable="d"
+        Title="MainWindow" Width="1280" Height="720">
+ 
+    <Window.DataContext>
+        <local:MainWindowVM />
+    </Window.DataContext>
+    
+    <Grid Margin="48,48,48,0">
+
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" CanContentScroll="False">
+            <StackPanel Orientation="Vertical" VerticalAlignment="Stretch">
+                <Grid Margin="0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Text="{Binding ModelPath, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" />
+                    <Button Content="Load Model File" Command="{Binding LoadModelFile}" IsEnabled="{Binding EnableLoadModelButton, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Grid.Column="1" Margin="16,0" />
+
+                </Grid>
+                
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox Text="{Binding QuestionBox, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsProcessing, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" MinHeight="30" MaxHeight="120" TextWrapping="Wrap" AcceptsReturn="True" />
+                    <Button Content="Ask" Command="{Binding AskCommand}" IsEnabled="{Binding EnableAskButton, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Grid.Column="1" Margin="16,0" />
+                </Grid>
+
+                <TextBlock 
+                    Text="{Binding AnswerBox, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                    TextWrapping="Wrap" VerticalAlignment="Stretch" Height="Auto" Margin="0,8" />
+
+                <Button Content="Copy" HorizontalAlignment="Center" Command="{Binding CopyOutputCommand}" Visibility="{Binding CopyButtonVisibility, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+
+            </StackPanel>
+        </ScrollViewer>
+
+    </Grid>
+</Window>
