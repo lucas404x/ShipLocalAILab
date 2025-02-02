@@ -24,10 +24,10 @@ public partial class MainWindow : Window
         DataContext = new MainWindowVM();
 
         NativeLibraryConfig.All
-            .WithCuda()
 #if DEBUG
-            .WithLogCallback((level, message) => Debug.WriteLine($"{level}: {message}"));
+            .WithLogCallback((level, message) => Debug.WriteLine($"{level}: {message}"))
 #endif
+            .WithCuda();
     }
 }
 
