@@ -42,6 +42,7 @@ public class MainWindowVM : INotifyPropertyChanged
     #region Properties
 
     private readonly LLMModel _model = new();
+    private CancellationTokenSource? _textGenCts;
 
     private string _modelPath = string.Empty;
     public string ModelPath
@@ -112,6 +113,7 @@ public class MainWindowVM : INotifyPropertyChanged
             OnPropertyChanged(nameof(EnableButtons));
             OnPropertyChanged(nameof(EnableAskButton));
             OnPropertyChanged(nameof(CopyButtonVisibility));
+            OnPropertyChanged(nameof(CancelButtonVisibility));
         }
     }
 
@@ -123,7 +125,22 @@ public class MainWindowVM : INotifyPropertyChanged
         && !string.IsNullOrWhiteSpace(SystemPrompt) 
         && !string.IsNullOrWhiteSpace(QuestionBox);
 
-    public Visibility CopyButtonVisibility => IsProcessing || string.IsNullOrWhiteSpace(AnswerBox) ? Visibility.Collapsed : Visibility.Visible;
+    public Visibility CopyButtonVisibility 
+        => IsProcessing || string.IsNullOrWhiteSpace(AnswerBox) ? Visibility.Collapsed : Visibility.Visible;
+
+    public Visibility CancelButtonVisibility 
+        => IsProcessing ? Visibility.Visible : Visibility.Hidden;
+
+    private bool _isCancelButtonEnabled = true;
+    public bool IsCancelButtonEnabled
+    {
+        get => _isCancelButtonEnabled;
+        set
+        {
+            _isCancelButtonEnabled = value;
+            OnPropertyChanged();
+        }
+    }
 
     private string _questionBox = string.Empty;
     public string QuestionBox
@@ -152,20 +169,22 @@ public class MainWindowVM : INotifyPropertyChanged
 
     #region Commands
 
-    public ICommand LoadModelFile { get; private set; }
+    public ICommand LoadModelFileCommand { get; private set; }
     public ICommand AskCommand { get; private set; }
     public ICommand CopyOutputCommand { get; private set; }
+    public ICommand CancelCommand { get; private set; }
 
     #endregion
 
     public MainWindowVM()
     {
-        LoadModelFile = new RelayCommand(LoadModel);
+        LoadModelFileCommand = new RelayCommand(LoadModelFile);
         AskCommand = new RelayCommand(Ask);
         CopyOutputCommand = new RelayCommand(CopyOutput);
+        CancelCommand = new RelayCommand(Cancel);
     }
 
-    private void LoadModel(object? obj)
+    private void LoadModelFile(object? obj)
     {
         var openFileDialog = new OpenFileDialog
         {
@@ -181,17 +200,23 @@ public class MainWindowVM : INotifyPropertyChanged
 
     private async void Ask(object? obj)
     {
-        AnswerBox = string.Empty;
         try
         {
+            AnswerBox = string.Empty;
             IsProcessing = true;
+            _textGenCts = new CancellationTokenSource();
 
-            await _model.LoadModel(new LLMModelConfig(ModelPath, SystemPrompt, GPULayerCount, ContextSize, ApplyTemplate));
+            await _model.LoadModel(new LLMModelConfig(ModelPath, SystemPrompt, GPULayerCount, ContextSize, ApplyTemplate), _textGenCts.Token);
+            
 
-            await foreach (var answer in _model.Chat(QuestionBox))
+            await foreach (var answer in _model.Chat(QuestionBox, _textGenCts.Token))
             {
                 AnswerBox += answer;
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // supress
         }
         catch (Exception e)
         {
@@ -200,11 +225,28 @@ public class MainWindowVM : INotifyPropertyChanged
         finally
         {
             IsProcessing = false;
+            ResetCancelState();
         }
+    }
+
+    private void ResetCancelState()
+    {
+        _textGenCts?.Dispose();
+        _textGenCts = null;
+        IsCancelButtonEnabled = true;
     }
 
     private void CopyOutput(object? obj)
         => Clipboard.SetText(AnswerBox);
+
+    private async void Cancel(object? obj)
+    {
+        if (_textGenCts is { IsCancellationRequested: false })
+        {
+            IsCancelButtonEnabled = false;
+            await _textGenCts.CancelAsync();
+        }
+    }
 
     protected void OnPropertyChanged([CallerMemberName] string p = "")
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(p));
@@ -223,9 +265,9 @@ public class LLMModel : IDisposable
     private LLamaWeights _model = null!;
     private StatelessExecutor? _executor;
 
-    public async Task LoadModel(LLMModelConfig modelConfig)
+    public async Task LoadModel(LLMModelConfig modelConfig, CancellationToken cancellationToken = default)
     {
-        if (_modelConfig == modelConfig) return;
+        if (_modelConfig == modelConfig && _model is not null && _executor is not null) return;
         Dispose();
 
         var sw = Stopwatch.StartNew();
@@ -240,10 +282,12 @@ public class LLMModel : IDisposable
                 ContextSize = _modelConfig.ContextSize,
             };
             
-            _model = await LLamaWeights.LoadFromFileAsync(modelParams);
+            _model = await LLamaWeights.LoadFromFileAsync(modelParams, cancellationToken);
             
             return modelParams;
         });
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         _executor = new StatelessExecutor(_model, parameters)
         {
@@ -252,7 +296,7 @@ public class LLMModel : IDisposable
         };
     }
 
-    public IAsyncEnumerable<string> Chat(string prompt)
+    public IAsyncEnumerable<string> Chat(string prompt, CancellationToken cancellationToken = default)
     {
         var inferenceParams = new InferenceParams()
         {
@@ -266,7 +310,7 @@ public class LLMModel : IDisposable
         {
             prompt = $"{_modelConfig.SystemPrompt}\n{prompt}";
         }
-        return _executor!.InferAsync(prompt, inferenceParams);
+        return _executor!.InferAsync(prompt, inferenceParams, cancellationToken);
     }
 
     public async Task<string> GetResponse(string prompt)

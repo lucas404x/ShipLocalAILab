@@ -10,10 +10,9 @@
     <Window.DataContext>
         <local:MainWindowVM />
     </Window.DataContext>
-    <Grid Margin="48,48,48,0">
+    <Grid Margin="16,16,16,0">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" CanContentScroll="False">
             <StackPanel Orientation="Vertical" VerticalAlignment="Stretch" Margin="16,0">
-
                 <Grid Margin="0,8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition />
@@ -23,13 +22,12 @@
                         <Label Content="Model Path" />
                         <TextBox d:Text="path/to/model" Text="{Binding ModelPath, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" />
                     </StackPanel>
-                    <Button VerticalAlignment="Bottom" Content="Load Model File" Command="{Binding LoadModelFile}" IsEnabled="{Binding EnableButtons, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Grid.Column="1" Margin="8,0,0,0" />
+                    <Button VerticalAlignment="Bottom" Content="Load Model File" Command="{Binding LoadModelFileCommand}" IsEnabled="{Binding EnableButtons, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Grid.Column="1" Margin="8,0,0,0" />
                 </Grid>
 
                 <StackPanel Orientation="Vertical" Margin="0,8">
                     <Label Content="System Prompt" />
                     <TextBox d:Text="system prompt" Text="{Binding SystemPrompt, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        IsEnabled="{Binding EnableButtons, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
                         MinHeight="60"
                         MaxHeight="120"
                         TextWrapping="Wrap"
@@ -48,7 +46,6 @@
                         <Label Content="GPU Layer Count" Margin="8,0" VerticalAlignment="Center"  />
                         <TextBox 
                             Text="{Binding GPULayerCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                            IsEnabled="{Binding EnableButtons, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
                             InputScope="Number" VerticalContentAlignment="Center" HorizontalAlignment="Stretch" Width="150" />
                     </StackPanel>
 
@@ -56,13 +53,11 @@
                         <Label Content="Context Size" Margin="8,0" VerticalAlignment="Center"  />
                         <TextBox 
                             Text="{Binding ContextSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                            IsEnabled="{Binding EnableButtons, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
                             InputScope="Number" VerticalContentAlignment="Center" HorizontalAlignment="Stretch" Width="150" />
                     </StackPanel>
 
                     <CheckBox Content="Apply Template" Grid.Column="2"
-                      IsChecked="{Binding ApplyTemplate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                      IsEnabled="{Binding EnableButtons, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" />
+                      IsChecked="{Binding ApplyTemplate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </Grid>
 
                 <Grid Margin="0,8">
@@ -72,7 +67,7 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation="Vertical">
                         <Label Content="Ask something" />
-                        <TextBox Text="{Binding QuestionBox, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="{Binding IsProcessing, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" MinHeight="30" MaxHeight="120" TextWrapping="Wrap" AcceptsReturn="True" />
+                        <TextBox Text="{Binding QuestionBox, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinHeight="30" MaxHeight="120" TextWrapping="Wrap" AcceptsReturn="True" />
                     </StackPanel>
                     <Button Content="Ask" VerticalAlignment="Bottom" Command="{Binding AskCommand}" IsEnabled="{Binding EnableAskButton, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Grid.Column="1" Margin="8,0,0,0" />
                 </Grid>
@@ -80,8 +75,13 @@
                 <TextBlock 
                     Text="{Binding AnswerBox, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                     TextWrapping="Wrap" VerticalAlignment="Stretch" Height="Auto" Margin="0,8" />
-                <Button Content="Copy" HorizontalAlignment="Center" Command="{Binding CopyOutputCommand}" Visibility="{Binding CopyButtonVisibility, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,8" />
             </StackPanel>
         </ScrollViewer>
+
+        <Button Grid.ZIndex="2" Content="Cancel" Command="{Binding CancelCommand}" ToolTip="Cancel AI response" Visibility="{Binding CancelButtonVisibility}" IsEnabled="{Binding IsCancelButtonEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                HorizontalAlignment="Center" VerticalAlignment="Bottom" Background="DarkRed" Margin="0,0,0,64" />
+
+        <Button Grid.ZIndex="2" Content="Copy" Background="DodgerBlue" HorizontalAlignment="Center" VerticalAlignment="Bottom" Command="{Binding CopyOutputCommand}" ToolTip="Copy AI response" Visibility="{Binding CopyButtonVisibility, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,64" />
+
     </Grid>
 </Window>
