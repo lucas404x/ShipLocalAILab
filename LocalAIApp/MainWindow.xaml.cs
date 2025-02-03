@@ -270,8 +270,6 @@ public class LLMModel : IDisposable
         if (_modelConfig == modelConfig && _model is not null && _executor is not null) return;
         Dispose();
 
-        var sw = Stopwatch.StartNew();
-
         _modelConfig = modelConfig;
 
         var parameters = await Task.Run(async () => // when load large models with cuda the operation may take a while, hanging the application for some seconds
@@ -289,7 +287,7 @@ public class LLMModel : IDisposable
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        _executor = new StatelessExecutor(_model, parameters)
+        _executor = new StatelessExecutor(_model!, parameters)
         {
             ApplyTemplate = _modelConfig.ApplyTemplate,
             SystemMessage = _modelConfig.ApplyTemplate ? _modelConfig.SystemPrompt : null,
