@@ -74,14 +74,17 @@
                 
                 <TextBlock 
                     Text="{Binding AnswerBox, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                    TextWrapping="Wrap" VerticalAlignment="Stretch" Height="Auto" Margin="0,8" />
+                    TextWrapping="Wrap" VerticalAlignment="Stretch" Height="Auto" Margin="0,8,0,128" />
             </StackPanel>
         </ScrollViewer>
 
-        <Button Grid.ZIndex="2" Content="Cancel" Command="{Binding CancelCommand}" ToolTip="Cancel AI response" Visibility="{Binding CancelButtonVisibility}" IsEnabled="{Binding IsCancelButtonEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                HorizontalAlignment="Center" VerticalAlignment="Bottom" Background="DarkRed" Margin="0,0,0,64" />
+        <Button Grid.ZIndex="2" Content="Cancel" Command="{Binding CancelCommand}" ToolTip="Cancel AI response" Background="DarkRed"
+                Visibility="{Binding CancelButtonVisibility}" IsEnabled="{Binding IsCancelButtonEnabled, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,64" />
 
-        <Button Grid.ZIndex="2" Content="Copy" Background="DodgerBlue" HorizontalAlignment="Center" VerticalAlignment="Bottom" Command="{Binding CopyOutputCommand}" ToolTip="Copy AI response" Visibility="{Binding CopyButtonVisibility, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,64" />
+        <Button Grid.ZIndex="2" Content="Copy" Command="{Binding CopyOutputCommand}" ToolTip="Copy AI response" Background="DodgerBlue" 
+                Visibility="{Binding CopyButtonVisibility, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" 
+                HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,64" />
 
     </Grid>
 </Window>
